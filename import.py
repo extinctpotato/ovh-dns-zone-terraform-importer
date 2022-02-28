@@ -1,4 +1,4 @@
-import sys, hcl, ovh, os
+import sys, hcl, ovh, os, stat
 
 # Define constants.
 OVH_TF_RESOURCE = "ovh_domain_zone_record"
@@ -16,7 +16,7 @@ except IndexError:
     pass
 
 main_tf_contents = ''
-import_sh_contents = ''
+import_sh_contents = '#!/bin/sh\n'
 
 # Create TF-friendly zone prefix.
 zone_res_name = zone.replace(".", "_dot_")
@@ -38,7 +38,8 @@ for r_id in record_ids:
 
     for k,v in record.items():
         # Resource ID is not part of the configuration.
-        if v == 'id':
+        if k == 'id':
+            import_sh_contents += f'terraform import {OVH_TF_RESOURCE}.{terraform_resource_name} {v}.{zone}\n'
             continue
 
         # Record values might contain double quotes.
@@ -49,3 +50,9 @@ for r_id in record_ids:
 
 with open(main_tf, 'w') as f:
     f.write(main_tf_contents)
+
+with open(import_sh, 'w') as f:
+    f.write(import_sh_contents)
+
+import_sh_stat = os.stat(import_sh)
+os.chmod(import_sh, import_sh_stat.st_mode | stat.S_IEXEC)
